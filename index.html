@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Taller Novoa · Sistema de gestión</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--tx:#1d2433;--mu:#667085;--bd:#d9dfea;--pr:#1f5aa6;--prt:#fff;--er:#b42318;--ok:#067647;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151c;--card:#1b2030;--tx:#e8ecf4;--mu:#9aa4b8;--bd:#2c3347;--pr:#5b9bf0;--prt:#0b1220;--er:#f97066;--ok:#47cd89;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12151c;--card:#1b2030;--tx:#e8ecf4;--mu:#9aa4b8;--bd:#2c3347;--pr:#5b9bf0;--prt:#0b1220;--er:#f97066;--ok:#47cd89;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+main{max-width:980px;margin:0 auto;padding:18px 14px 40px}
+h1{font-size:20px;margin:0}h2{font-size:16px;margin:0 0 10px}
+.sub{color:var(--mu);font-size:12px;margin:2px 0 14px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+nav button,.btn{font:inherit;font-size:13px;padding:6px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+nav button[aria-current="true"]{background:var(--pr);color:var(--prt);border-color:var(--pr)}
+.btn.p{background:var(--pr);color:var(--prt);border-color:var(--pr)}
+.btn.d{color:var(--er);border-color:var(--er)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--pr);outline-offset:2px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.stats b{display:block;font-size:24px}.stats span{color:var(--mu);font-size:13px}
+form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--mu);gap:3px;flex:1 1 150px}
+input,select{font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--bd);border-radius:7px;background:var(--bg);color:var(--tx);width:100%}
+.err{color:var(--er);font-size:13px;margin:0 0 10px;min-height:0}
+.tools{display:flex;gap:8px;margin-bottom:10px}.tools input{flex:1}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{color:var(--mu);font-weight:600;font-size:13px}
+td.a{text-align:right}td.a .btn{padding:3px 9px;font-size:12px;margin-left:4px}
+.tag{font-size:12px;border:1px solid var(--bd);border-radius:99px;padding:1px 9px}
+.empty{color:var(--mu);padding:14px 0}
+.low{color:var(--er);font-weight:600}
+ul.info{padding-left:18px;margin:6px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Taller Novoa · Sistema de gestión</h1>
+<p class="sub">Prototipo funcional: los datos de ejemplo son ficticios y se guardan en este navegador.</p>
+<nav id="nav" aria-label="Módulos"></nav>
+<section id="view"></section>
+</main>
+<script>
+(function(){
+var KEY="tallerNovoa.v1";
+var SEED={
+ clientes:[{id:1,nombre:"Luis Ramírez",telefono:"3312345678",correo:"luis@ejemplo.com"},{id:2,nombre:"María Torres",telefono:"3398765432",correo:""}],
+ vehiculos:[{id:1,cliente:1,marca:"Nissan",modelo:"Versa",anio:"2018",placas:"JKL-123-A"},{id:2,cliente:2,marca:"Volkswagen",modelo:"Jetta",anio:"2015",placas:"MNP-456-B"}],
+ empleados:[{id:1,nombre:"Jorge Novoa",puesto:"Mecánico",telefono:"3311112222"},{id:2,nombre:"Ana Pérez",puesto:"Recepción",telefono:""}],
+ articulos:[{id:1,nombre:"Filtro de aceite",categoria:"Filtros",precio:"150",existencias:"12"},{id:2,nombre:"Balatas delanteras",categoria:"Frenos",precio:"620",existencias:"3"}],
+ citas:[{id:1,cliente:1,vehiculo:1,mecanico:1,fecha:"2026-11-25",hora:"10:00",servicio:"Cambio de aceite",estado:"Pendiente"}],
+ refacciones:[{id:1,cliente:2,articulo:2,cantidad:"1",estado:"Solicitada"}]
+};
+var db;
+try{db=JSON.parse(localStorage.getItem(KEY))}catch(e){db=null}
+if(!db||!db.clientes)db=JSON.parse(JSON.stringify(SEED));
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
+function nm(list,id){var o=db[list].find(function(x){return x.id==id});return o?(o.nombre||o.marca+" "+o.modelo+" ("+o.placas+")"):"—"}
+function opts(list){return function(){return db[list].map(function(o){return[o.id,o.nombre||o.marca+" "+o.modelo+" ("+o.placas+")"]})}}
+function lit(a){return function(){return a.map(function(x){return[x,x]})}}
+var today=new Date();today=today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0")+"-"+String(today.getDate()).padStart(2,"0");
+var M={
+ clientes:{t:"Clientes",f:[{k:"nombre",l:"Nombre",r:1},{k:"telefono",l:"Teléfono (10 dígitos)",p:"[0-9]*"},{k:"correo",l:"Correo",ty:"email"}],
+  v:function(o){if(o.telefono&&!/^\d{10}$/.test(o.telefono))return"El teléfono debe tener 10 dígitos."}},
+ vehiculos:{t:"Vehículos",f:[{k:"cliente",l:"Cliente",r:1,o:opts("clientes")},{k:"marca",l:"Marca",r:1},{k:"modelo",l:"Modelo",r:1},{k:"anio",l:"Año",ty:"number"},{k:"placas",l:"Placas",r:1}],
+  v:function(o,id){if(o.anio&&(o.anio<1950||o.anio>new Date().getFullYear()+1))return"El año no es válido.";
+   if(db.vehiculos.some(function(x){return x.id!=id&&x.placas.toLowerCase()==o.placas.toLowerCase()}))return"Ya existe un vehículo con esas placas."}},
+ citas:{t:"Citas",f:[{k:"cliente",l:"Cliente",r:1,o:opts("clientes")},{k:"vehiculo",l:"Vehículo",r:1,o:opts("vehiculos")},{k:"mecanico",l:"Mecánico",o:function(){return db.empleados.filter(function(e){return e.puesto=="Mecánico"}).map(function(e){return[e.id,e.nombre]})}},{k:"fecha",l:"Fecha",r:1,ty:"date"},{k:"hora",l:"Hora",r:1,ty:"time"},{k:"servicio",l:"Servicio",r:1},{k:"estado",l:"Estado",o:lit(["Pendiente","En proceso","Terminada","Cancelada"]),d:"Pendiente"}],
+  v:function(o,id){if(o.estado=="Pendiente"&&o.fecha<today)return"La fecha de una cita pendiente no puede ser anterior a hoy.";
+   if(o.hora<"08:00"||o.hora>"18:00")return"El horario de atención es de 8:00 a 18:00.";
+   if(o.mecanico&&db.citas.some(function(x){return x.id!=id&&x.mecanico==o.mecanico&&x.fecha==o.fecha&&x.hora==o.hora&&x.estado!="Cancelada"}))return"Ese mecánico ya tiene una cita a esa hora."}},
+ empleados:{t:"Empleados",f:[{k:"nombre",l:"Nombre",r:1},{k:"puesto",l:"Puesto",r:1,o:lit(["Mecánico","Recepción","Administración"])},{k:"telefono",l:"Teléfono (10 dígitos)"}],
+  v:function(o){if(o.telefono&&!/^\d{10}$/.test(o.telefono))return"El teléfono debe tener 10 dígitos."}},
+ articulos:{t:"Artículos",f:[{k:"nombre",l:"Nombre",r:1},{k:"categoria",l:"Categoría"},{k:"precio",l:"Precio (MXN)",r:1,ty:"number",st:"0.01"},{k:"existencias",l:"Existencias",r:1,ty:"number"}],
+  v:function(o){if(!(+o.precio>0))return"El precio debe ser mayor a 0.";if(!/^\d+$/.test(o.existencias))return"Las existencias deben ser un número entero de 0 o más."}},
+ refacciones:{t:"Refacciones",f:[{k:"cliente",l:"Cliente",r:1,o:opts("clientes")},{k:"articulo",l:"Artículo",r:1,o:opts("articulos")},{k:"cantidad",l:"Cantidad",r:1,ty:"number"},{k:"estado",l:"Estado",o:lit(["Solicitada","Aprobada","Entregada","Cancelada"]),d:"Solicitada"}],
+  v:function(o){if(!/^[1-9]\d*$/.test(o.cantidad))return"La cantidad debe ser un entero mayor a 0."}}
+};
+var REF={clientes:["vehiculos","citas","refacciones"],vehiculos:["citas"],empleados:["citas"],articulos:["refacciones"]};
+var LINK={cliente:"clientes",vehiculo:"vehiculos",mecanico:"empleados",articulo:"articulos"};
+var TABS=[["bienvenida","Bienvenida"],["panel","Panel interno"],["clientes","Clientes"],["vehiculos","Vehículos"],["citas","Citas"],["empleados","Empleados"],["articulos","Artículos"],["refacciones","Refacciones"]];
+var view=document.getElementById("view"),nav=document.getElementById("nav");
+var cur="bienvenida",editing=null,q="",msg="";
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function go(t){cur=t;editing=null;q="";msg="";try{history.replaceState(null,"","#"+t)}catch(e){}render()}
+function render(){
+ nav.innerHTML=TABS.map(function(t){return'<button data-t="'+t[0]+'" aria-current="'+(t[0]==cur)+'">'+t[1]+'</button>'}).join("");
+ if(cur=="bienvenida")welcome();else if(cur=="panel")panel();else crud();
+}
+nav.onclick=function(e){var t=e.target.getAttribute&&e.target.getAttribute("data-t");if(t)go(t)};
+function welcome(){
+ view.innerHTML='<div class="card"><h2>Taller Novoa</h2><p>Taller mecánico en Guadalajara, Jalisco. Revisamos, reparamos y damos mantenimiento a tu vehículo con refacciones de calidad.</p></div>'+
+ '<div class="card"><h2>Servicios</h2><ul class="info"><li>Cambio de aceite y filtros</li><li>Frenos y suspensión</li><li>Afinación y diagnóstico</li><li>Venta de refacciones</li></ul><p class="sub">Precios y políticas de ejemplo, por validar con el taller.</p></div>'+
+ '<div class="card"><h2>Contacto</h2><p>Teléfono: 33 1111 2222<br>Horario: lunes a sábado, 8:00 a 18:00</p><p><button class="btn p" data-t="citas">Agendar una cita</button></p></div>';
+ view.querySelector("[data-t]").onclick=function(){go("citas")};
+}
+function panel(){
+ var low=db.articulos.filter(function(a){return +a.existencias<=3});
+ var next=db.citas.filter(function(c){return c.estado=="Pendiente"&&c.fecha>=today}).sort(function(a,b){return(a.fecha+a.hora)<(b.fecha+b.hora)?-1:1});
+ var s=["clientes","vehiculos","citas","empleados","articulos","refacciones"].map(function(k){return'<div class="card"><b>'+db[k].length+'</b><span>'+M[k].t+'</span></div>'}).join("");
+ view.innerHTML='<div class="stats">'+s+'</div><div class="card"><h2>Próximas citas</h2>'+(next.length?next.map(function(c){return'<div>'+esc(c.fecha)+' '+esc(c.hora)+' · '+esc(nm("clientes",c.cliente))+' · '+esc(nm("vehiculos",c.vehiculo))+' · '+esc(c.servicio)+' <span class="tag">'+esc(c.estado)+'</span></div>'}).join(""):'<div class="empty">No hay citas pendientes.</div>')+'</div>'+
+ '<div class="card"><h2>Artículos con pocas existencias (3 o menos)</h2>'+(low.length?low.map(function(a){return'<div>'+esc(a.nombre)+': <span class="low">'+esc(a.existencias)+'</span></div>'}).join(""):'<div class="empty">Todo el inventario está arriba del mínimo.</div>')+'</div>';
+}
+function cell(m,f,r){var v=r[f.k];if(LINK[f.k])return esc(nm(LINK[f.k],v));if(f.k=="estado")return'<span class="tag">'+esc(v)+'</span>';if(f.k=="precio")return"$"+(+v).toFixed(2);return esc(v)}
+function crud(){
+ var m=M[cur],ed=editing?db[cur].find(function(x){return x.id==editing}):null;
+ var form=m.f.map(function(f){
+  var v=ed?ed[f.k]:(f.d||""),h="";
+  if(f.o){h='<select name="'+f.k+'"'+(f.r?" required":"")+'><option value="">Selecciona…</option>'+f.o().map(function(o){return'<option value="'+esc(o[0])+'"'+(o[0]==v?" selected":"")+'>'+esc(o[1])+'</option>'}).join("")+'</select>'}
+  else h='<input name="'+f.k+'" type="'+(f.ty||"text")+'" value="'+esc(v)+'"'+(f.r?" required":"")+(f.st?' step="'+f.st+'"':"")+(f.ty=="number"?' min="0"':"")+'>';
+  return'<label>'+f.l+(f.r?" *":"")+h+'</label>'}).join("");
+ var rows=db[cur].filter(function(r){return!q||m.f.map(function(f){return cell(m,f,r).replace(/<[^>]+>/g,"")}).join(" ").toLowerCase().indexOf(q.toLowerCase())>-1});
+ view.innerHTML='<p class="err" role="alert">'+esc(msg)+'</p><div class="card"><h2>'+(ed?"Editar":"Nuevo registro")+' · '+m.t+'</h2><form id="f" novalidate>'+form+'<button class="btn p" type="submit">'+(ed?"Guardar cambios":"Agregar")+'</button>'+(ed?'<button class="btn" type="button" id="cx">Cancelar</button>':"")+'</form></div>'+
+ '<div class="card"><div class="tools"><input id="q" type="search" placeholder="Buscar…" value="'+esc(q)+'" aria-label="Buscar"><button class="btn" id="rs">Restablecer datos de ejemplo</button></div><div class="wrap">'+
+ (rows.length?'<table><thead><tr>'+m.f.map(function(f){return'<th>'+f.l.replace(/ \(.*\)/,"")+'</th>'}).join("")+'<th></th></tr></thead><tbody>'+rows.map(function(r){return'<tr>'+m.f.map(function(f){return'<td>'+cell(m,f,r)+'</td>'}).join("")+'<td class="a"><button class="btn" data-e="'+r.id+'">Editar</button><button class="btn d" data-x="'+r.id+'">Eliminar</button></td></tr>'}).join("")+'</tbody></table>':'<div class="empty">'+(q?"Ningún registro coincide con la búsqueda.":"Aún no hay registros. Usa el formulario para agregar el primero.")+'</div>')+'</div></div>';
+ document.getElementById("f").onsubmit=function(e){e.preventDefault();submit(this)};
+ var cx=document.getElementById("cx");if(cx)cx.onclick=function(){editing=null;msg="";render()};
+ var qi=document.getElementById("q");qi.oninput=function(){q=this.value;var p=this.selectionStart;crud();var n=document.getElementById("q");n.focus();n.setSelectionRange(p,p)};
+ document.getElementById("rs").onclick=function(){if(confirm("¿Restablecer todos los datos de ejemplo? Se perderán los cambios.")){db=JSON.parse(JSON.stringify(SEED));save();editing=null;msg="";render()}};
+ view.onclick=function(e){var t=e.target,i;
+  if(i=t.getAttribute&&t.getAttribute("data-e")){editing=+i;msg="";crud();window.scrollTo(0,0)}
+  if(i=t.getAttribute&&t.getAttribute("data-x"))del(+i)};
+}
+function submit(form){
+ var m=M[cur],o={};
+ m.f.forEach(function(f){o[f.k]=form.elements[f.k].value.trim()});
+ var miss=m.f.filter(function(f){return f.r&&!o[f.k]})[0];
+ if(miss){msg="Completa el campo «"+miss.l.replace(/ \(.*\)/,"")+"».";return crud()}
+ var er=m.v&&m.v(o,editing);
+ if(er){msg=er;
+  var keep=o;render=render;crud();
+  m.f.forEach(function(f){var el=document.querySelector('[name="'+f.k+'"]');if(el)el.value=keep[f.k]});return}
+ ["cliente","vehiculo","mecanico","articulo"].forEach(function(k){if(o[k]!==undefined&&o[k]!=="")o[k]=+o[k]});
+ if(editing){var r=db[cur].find(function(x){return x.id==editing});Object.assign(r,o)}
+ else{o.id=db[cur].reduce(function(a,x){return Math.max(a,x.id)},0)+1;db[cur].push(o)}
+ save();editing=null;msg="";crud();
+}
+function del(id){
+ var used=(REF[cur]||[]).filter(function(t){var k=Object.keys(LINK).filter(function(k){return LINK[k]==cur})[0];return db[t].some(function(x){return x[k]==id})});
+ if(used.length){msg="No se puede eliminar: tiene registros en "+used.map(function(t){return M[t].t.toLowerCase()}).join(", ")+".";return crud()}
+ if(!confirm("¿Eliminar este registro?"))return;
+ db[cur]=db[cur].filter(function(x){return x.id!=id});save();msg="";crud();
+}
+var h=location.hash.replace("#","");if(TABS.some(function(t){return t[0]==h}))cur=h;
+render();
+})();
+</script>
+</body>
+</html>
